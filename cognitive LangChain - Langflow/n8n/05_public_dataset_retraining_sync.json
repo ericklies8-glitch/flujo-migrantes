@@ -1,0 +1,39 @@
+{
+    "id":  "WF-05",
+    "name":  "05_Actualizacion_Periodica_Dataset_Publico_ML",
+    "active":  true,
+    "nodes":  [
+                  {
+                      "name":  "Cron Semanal Domingos 02AM",
+                      "type":  "n8n-nodes-base.cron",
+                      "position":  [
+                                       240,
+                                       300
+                                   ],
+                      "parameters":  {
+                                         "triggerTimes":  {
+                                                              "item":  [
+                                                                           {
+                                                                               "mode":  "everyWeek",
+                                                                               "hour":  2,
+                                                                               "minute":  0,
+                                                                               "weekday":  "0"
+                                                                           }
+                                                                       ]
+                                                          }
+                                     }
+                  },
+                  {
+                      "name":  "Ejecutar Pipeline Reentrenamiento UCI + Feedback Falsos Positivos",
+                      "type":  "n8n-nodes-base.httpRequest",
+                      "position":  [
+                                       540,
+                                       300
+                                   ],
+                      "parameters":  {
+                                         "url":  "http://backend:8000/api/v1/ml/retrain-public-dataset",
+                                         "method":  "POST"
+                                     }
+                  }
+              ]
+}

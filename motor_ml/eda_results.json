@@ -1,0 +1,106 @@
+{
+    "total_registros": 5000,
+    "resumen_estadistico_variables_continuas": {
+        "Edad": {
+            "media": 28.0024,
+            "desviacion_estandar": 7.177569068950009,
+            "minimo": 18.0,
+            "cuartil_25": 22.0,
+            "mediana_cuartil_50": 28.0,
+            "cuartil_75": 33.0,
+            "maximo": 59.0,
+            "conteo": 5000
+        },
+        "Recursos_USD": {
+            "media": 122.4272,
+            "desviacion_estandar": 114.79430058347536,
+            "minimo": 10.0,
+            "cuartil_25": 51.0,
+            "mediana_cuartil_50": 90.0,
+            "cuartil_75": 154.0,
+            "maximo": 1500.0,
+            "conteo": 5000
+        },
+        "Prob_Transito_Rapido": {
+            "media": 58.8824,
+            "desviacion_estandar": 15.805598173644848,
+            "minimo": 8.0,
+            "cuartil_25": 48.0,
+            "mediana_cuartil_50": 60.0,
+            "cuartil_75": 71.0,
+            "maximo": 98.0,
+            "conteo": 5000
+        }
+    },
+    "matriz_correlacion_pearson": {
+        "Edad": {
+            "Edad": 1.0,
+            "Recursos_USD": -0.001,
+            "Prob_Transito_Rapido": 0.0179
+        },
+        "Recursos_USD": {
+            "Edad": -0.001,
+            "Recursos_USD": 1.0,
+            "Prob_Transito_Rapido": 0.1675
+        },
+        "Prob_Transito_Rapido": {
+            "Edad": 0.0179,
+            "Recursos_USD": 0.1675,
+            "Prob_Transito_Rapido": 1.0
+        }
+    },
+    "matriz_correlacion_spearman": {
+        "Edad": {
+            "Edad": 1.0,
+            "Recursos_USD": -0.0108,
+            "Prob_Transito_Rapido": 0.0229
+        },
+        "Recursos_USD": {
+            "Edad": -0.0108,
+            "Recursos_USD": 1.0,
+            "Prob_Transito_Rapido": 0.1213
+        },
+        "Prob_Transito_Rapido": {
+            "Edad": 0.0229,
+            "Recursos_USD": 0.1213,
+            "Prob_Transito_Rapido": 1.0
+        }
+    },
+    "correlacion_con_target": {
+        "pearson": {
+            "Edad": 0.0179,
+            "Recursos_USD": 0.1675
+        },
+        "spearman": {
+            "Edad": 0.0229,
+            "Recursos_USD": 0.1213
+        }
+    },
+    "conteos_demograficos": {
+        "Salud": {
+            "Buena": 3310,
+            "Regular": 1209,
+            "Crónica": 481
+        },
+        "Nivel_Educativo": {
+            "Secundaria": 2768,
+            "Técnico": 1007,
+            "Básico": 716,
+            "Universitario": 509
+        },
+        "Vínculos_Familiares": {
+            "Sí (Lima)": 2276,
+            "No": 1754,
+            "Sí (Trujillo)": 970
+        },
+        "Documentacion": {
+            "Cédula": 2476,
+            "Sin Papeles": 1806,
+            "Pasaporte": 718
+        },
+        "Género": {
+            "Masculino": 2532,
+            "Femenino": 2468
+        }
+    }
+}

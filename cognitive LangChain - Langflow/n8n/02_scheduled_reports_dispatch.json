@@ -1,0 +1,41 @@
+{
+    "id":  "WF-02",
+    "name":  "02_Generacion_Y_Envio_Programado_Reportes",
+    "active":  true,
+    "nodes":  [
+                  {
+                      "name":  "Cron Semanal Lunes 07AM",
+                      "type":  "n8n-nodes-base.cron",
+                      "position":  [
+                                       240,
+                                       300
+                                   ],
+                      "parameters":  {
+                                         "triggerTimes":  {
+                                                              "item":  [
+                                                                           {
+                                                                               "mode":  "everyWeek",
+                                                                               "hour":  7,
+                                                                               "minute":  0,
+                                                                               "weekday":  "1"
+                                                                           }
+                                                                       ]
+                                                          }
+                                     }
+                  },
+                  {
+                      "name":  "Solicitar Reporte PDF ReportLab y XLSX a FastAPI",
+                      "type":  "n8n-nodes-base.httpRequest",
+                      "position":  [
+                                       520,
+                                       300
+                                   ],
+                      "parameters":  {
+                                         "url":  "http://backend:8000/api/v1/reports/scheduled-generate",
+                                         "method":  "POST",
+                                         "jsonParameters":  true,
+                                         "bodyParametersJson":  "{\"categories\": [\"OPERATIONAL\", \"MANAGEMENT\"], \"formats\": [\"PDF\", \"DOCX\", \"XLSX\"]}"
+                                     }
+                  }
+              ]
+}

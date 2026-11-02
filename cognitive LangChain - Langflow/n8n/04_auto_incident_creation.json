@@ -1,0 +1,31 @@
+{
+    "id":  "WF-04",
+    "name":  "04_Creacion_Automatica_Tickets_Incidentes",
+    "active":  true,
+    "nodes":  [
+                  {
+                      "name":  "Webhook Umbral ML Superado",
+                      "type":  "n8n-nodes-base.webhook",
+                      "position":  [
+                                       240,
+                                       300
+                                   ],
+                      "parameters":  {
+                                         "httpMethod":  "POST",
+                                         "path":  "auto-create-incident"
+                                     }
+                  },
+                  {
+                      "name":  "Crear Ticket en PostgreSQL vÃ­a FastAPI",
+                      "type":  "n8n-nodes-base.httpRequest",
+                      "position":  [
+                                       520,
+                                       300
+                                   ],
+                      "parameters":  {
+                                         "url":  "http://backend:8000/api/v1/incidents/auto-create",
+                                         "method":  "POST"
+                                     }
+                  }
+              ]
+}

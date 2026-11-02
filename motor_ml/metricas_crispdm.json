@@ -1,0 +1,122 @@
+{
+    "proyecto": "Sistema MDT - Gemelo Digital de Flujo Migratorio",
+    "fase": "Modelado y Evaluación (CRISP-DM)",
+    "modelo_seleccionado": "XGBRegressor",
+    "mejores_hiperparametros": {
+        "learning_rate": 0.05,
+        "max_depth": 3,
+        "n_estimators": 200,
+        "subsample": 0.8
+    },
+    "evaluacion_benchmarking_test": {
+        "LinearRegression": {
+            "RMSE": 5.307,
+            "MAE": 4.1849,
+            "R2": 0.8915
+        },
+        "RandomForestRegressor": {
+            "RMSE": 5.8344,
+            "MAE": 4.6637,
+            "R2": 0.8689
+        },
+        "XGBRegressor": {
+            "RMSE": 5.5398,
+            "MAE": 4.4216,
+            "R2": 0.8818
+        }
+    },
+    "validacion_cruzada_5_folds": {
+        "LinearRegression": {
+            "r2_mean": 0.8936436972949086,
+            "r2_std": 0.006049371414357215,
+            "rmse_mean": 5.149482638350485,
+            "rmse_std": 0.09236005023230631,
+            "mae_mean": 4.107906073999657,
+            "mae_std": 0.07138704849369677,
+            "folds_r2": [
+                0.8973,
+                0.8902,
+                0.8985,
+                0.8989,
+                0.8834
+            ],
+            "folds_rmse": [
+                5.0965,
+                5.2018,
+                5.0462,
+                5.0989,
+                5.304
+            ]
+        },
+        "RandomForestRegressor": {
+            "r2_mean": 0.8631690938677007,
+            "r2_std": 0.008345002245413374,
+            "rmse_mean": 5.84019747099411,
+            "rmse_std": 0.11413449397434106,
+            "mae_mean": 4.686331602380952,
+            "mae_std": 0.11000308346109434,
+            "folds_r2": [
+                0.8701,
+                0.8571,
+                0.8637,
+                0.8739,
+                0.851
+            ],
+            "folds_rmse": [
+                5.7323,
+                5.9319,
+                5.8475,
+                5.6947,
+                5.9946
+            ]
+        },
+        "XGBRegressor": {
+            "r2_mean": 0.8815424445349533,
+            "r2_std": 0.008918893630740334,
+            "rmse_mean": 5.4323810824889,
+            "rmse_std": 0.14426562907894916,
+            "mae_mean": 4.343419634246826,
+            "mae_std": 0.12075792307538939,
+            "folds_r2": [
+                0.8901,
+                0.877,
+                0.8847,
+                0.8895,
+                0.8664
+            ],
+            "folds_rmse": [
+                5.2713,
+                5.5046,
+                5.3775,
+                5.3317,
+                5.6768
+            ]
+        }
+    },
+    "evaluacion_modelo_calibrado_test": {
+        "RMSE": 5.3629,
+        "MAE": 4.2698,
+        "R2": 0.8892
+    },
+    "pruebas_estadisticas_robustas": {
+        "comparacion_modelos_xgb_vs_rf": {
+            "test_wilcoxon": {
+                "estadistico_W": 15.0,
+                "p_value": 0.03125,
+                "hipotesis_alternativa": "XGBoost > RandomForest"
+            },
+            "test_t_student_pareado": {
+                "estadistico_t": 15.279106556500366,
+                "p_value": 5.350913841871604e-05,
+                "hipotesis_alternativa": "XGBoost > RandomForest"
+            },
+            "significancia_alcanzada_p_menor_005": true
+        },
+        "intervalo_confianza_95_r2_bootstrap": {
+            "n_iteraciones": 1000,
+            "media_bootstrap": 0.8886,
+            "limite_inferior_2_5": 0.8765,
+            "limite_superior_97_5": 0.9004
+        }
+    }
+}

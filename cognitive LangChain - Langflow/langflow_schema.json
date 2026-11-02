@@ -1,0 +1,201 @@
+{
+  "name": "MDT Cognitive Agent Flow",
+  "description": "Flujo ReAct Autónomo para el Sistema MDT (Migration Digital Twin). Conecta con endpoints de FastAPI en http://127.0.0.1:8000.",
+  "data": {
+    "nodes": [
+      {
+        "id": "chat_input_001",
+        "type": "ChatInput",
+        "position": {
+          "x": 60,
+          "y": 280
+        },
+        "data": {
+          "type": "ChatInput",
+          "node": {
+            "template": {
+              "input_value": {
+                "type": "str",
+                "value": "",
+                "placeholder": "Ingrese su consulta sobre el corredor humanitario o perfil de migrante...",
+                "required": true
+              }
+            },
+            "description": "Punto de entrada de mensajes del usuario operador o analista."
+          }
+        }
+      },
+      {
+        "id": "prompt_template_002",
+        "type": "PromptTemplate",
+        "position": {
+          "x": 420,
+          "y": 180
+        },
+        "data": {
+          "type": "PromptTemplate",
+          "node": {
+            "template": {
+              "template": {
+                "type": "str",
+                "value": "Eres el Asistente Senior de Decisión Humanitaria y Demografía Computacional del Sistema MDT (Migration Digital Twin).\nTu objetivo es brindar soporte a analistas de ACNUR, OIM y Cancillería evaluando en tiempo real:\n1. La telemetría y cuellos de botella en los nodos (Huaquillas, Tumbes, Piura, Trujillo, Lima).\n2. El riesgo de colapso en albergues bajo el umbral crítico de 250 personas.\n3. La inferencia individual de probabilidad de tránsito rápido del modelo XGBoost.\n4. La validez formal del contraste de hipótesis (test de Wilcoxon p=0.03125).\n\nConsulta del Operador: {input}\nHistorial: {chat_history}"
+              }
+            },
+            "description": "Plantilla de Sistema que define la personalidad y capacidades del Agente MDT."
+          }
+        }
+      },
+      {
+        "id": "tool_telemetria_003",
+        "type": "ToolComponent",
+        "position": {
+          "x": 420,
+          "y": 380
+        },
+        "data": {
+          "type": "ToolComponent",
+          "node": {
+            "name": "consultar_telemetria_nodos",
+            "description": "Extrae censo actual, capacidad máxima, saturación (%) y estado de alerta de los 5 nodos del corredor humanitario (Huaquillas, Tumbes, Piura, Trujillo, Lima) desde GET http://127.0.0.1:8000/corridor/telemetry.",
+            "endpoint": "http://127.0.0.1:8000/corridor/telemetry",
+            "method": "GET"
+          }
+        }
+      },
+      {
+        "id": "tool_simulacion_004",
+        "type": "ToolComponent",
+        "position": {
+          "x": 420,
+          "y": 520
+        },
+        "data": {
+          "type": "ToolComponent",
+          "node": {
+            "name": "simular_impacto_corredor",
+            "description": "Proyecta dinámicas de sistemas de 'Retenidos' vs 'Integrados' mes a mes y evalúa saturación frente al umbral crítico de colapso fijado en 250 personas en albergues vía POST http://127.0.0.1:8000/corridor/simulate.",
+            "endpoint": "http://127.0.0.1:8000/corridor/simulate",
+            "method": "POST"
+          }
+        }
+      },
+      {
+        "id": "tool_predict_005",
+        "type": "ToolComponent",
+        "position": {
+          "x": 420,
+          "y": 660
+        },
+        "data": {
+          "type": "ToolComponent",
+          "node": {
+            "name": "evaluar_perfil_migrante",
+            "description": "Ejecuta inferencia individual con el modelo calibrado XGBoost vía POST http://127.0.0.1:8000/predict, retornando la probabilidad calculada (%) y categoría de riesgo humanitario.",
+            "endpoint": "http://127.0.0.1:8000/predict",
+            "method": "POST"
+          }
+        }
+      },
+      {
+        "id": "tool_metricas_006",
+        "type": "ToolComponent",
+        "position": {
+          "x": 420,
+          "y": 800
+        },
+        "data": {
+          "type": "ToolComponent",
+          "node": {
+            "name": "consultar_metricas_robustas",
+            "description": "Obtiene las métricas CRISP-DM, 5 Folds, contraste de hipótesis con Wilcoxon (p = 0.03125), T-Student y Bootstrapping al 95% desde GET http://127.0.0.1:8000/metrics/crispdm.",
+            "endpoint": "http://127.0.0.1:8000/metrics/crispdm",
+            "method": "GET"
+          }
+        }
+      },
+      {
+        "id": "agent_react_007",
+        "type": "AgentComponent",
+        "position": {
+          "x": 860,
+          "y": 280
+        },
+        "data": {
+          "type": "AgentComponent",
+          "node": {
+            "name": "MDT_ReAct_Agent",
+            "agent_type": "zero-shot-react-description",
+            "description": "Motor de razonamiento y acción ReAct que descompone preguntas complejas, consulta herramientas de telemetría y ML de FastAPI, y sintetiza decisiones humanitarias.",
+            "max_iterations": 6,
+            "return_intermediate_steps": true
+          }
+        }
+      },
+      {
+        "id": "chat_output_008",
+        "type": "ChatOutput",
+        "position": {
+          "x": 1260,
+          "y": 280
+        },
+        "data": {
+          "type": "ChatOutput",
+          "node": {
+            "description": "Despliegue de la respuesta humanitaria final con traza de razonamiento."
+          }
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "edge_input_to_prompt",
+        "source": "chat_input_001",
+        "target": "prompt_template_002",
+        "sourceHandle": "message",
+        "targetHandle": "input"
+      },
+      {
+        "id": "edge_prompt_to_agent",
+        "source": "prompt_template_002",
+        "target": "agent_react_007",
+        "sourceHandle": "prompt",
+        "targetHandle": "prompt"
+      },
+      {
+        "id": "edge_tool1_to_agent",
+        "source": "tool_telemetria_003",
+        "target": "agent_react_007",
+        "sourceHandle": "tool",
+        "targetHandle": "tools"
+      },
+      {
+        "id": "edge_tool2_to_agent",
+        "source": "tool_simulacion_004",
+        "target": "agent_react_007",
+        "sourceHandle": "tool",
+        "targetHandle": "tools"
+      },
+      {
+        "id": "edge_tool3_to_agent",
+        "source": "tool_predict_005",
+        "target": "agent_react_007",
+        "sourceHandle": "tool",
+        "targetHandle": "tools"
+      },
+      {
+        "id": "edge_tool4_to_agent",
+        "source": "tool_metricas_006",
+        "target": "agent_react_007",
+        "sourceHandle": "tool",
+        "targetHandle": "tools"
+      },
+      {
+        "id": "edge_agent_to_output",
+        "source": "agent_react_007",
+        "target": "chat_output_008",
+        "sourceHandle": "output",
+        "targetHandle": "message"
+      }
+    ]
+  }
+}

@@ -1,0 +1,53 @@
+{
+    "id":  "WF-01",
+    "name":  "01_Notificacion_Alertas_Criticas_SOC",
+    "active":  true,
+    "nodes":  [
+                  {
+                      "name":  "Webhook Alerta CrÃ­tica FastAPI",
+                      "type":  "n8n-nodes-base.webhook",
+                      "position":  [
+                                       240,
+                                       300
+                                   ],
+                      "parameters":  {
+                                         "httpMethod":  "POST",
+                                         "path":  "critical-phishing-alert",
+                                         "responseMode":  "onReceived"
+                                     }
+                  },
+                  {
+                      "name":  "Filtro Severidad HIGH o CRITICAL",
+                      "type":  "n8n-nodes-base.if",
+                      "position":  [
+                                       480,
+                                       300
+                                   ],
+                      "parameters":  {
+                                         "conditions":  {
+                                                            "string":  [
+                                                                           {
+                                                                               "value1":  "={{$json[\"risk_level\"]}}",
+                                                                               "operation":  "regex",
+                                                                               "value2":  "^(HIGH|CRITICAL)$"
+                                                                           }
+                                                                       ]
+                                                        }
+                                     }
+                  },
+                  {
+                      "name":  "Despacho Alerta Canal SOC \u0026 Correo Simulado",
+                      "type":  "n8n-nodes-base.httpRequest",
+                      "position":  [
+                                       740,
+                                       300
+                                   ],
+                      "parameters":  {
+                                         "url":  "http://backend:8000/api/v1/alerts/dispatch",
+                                         "method":  "POST",
+                                         "jsonParameters":  true,
+                                         "bodyParametersJson":  "={\"submission_id\": \"{{$json[\"submission_id\"]}}\", \"risk_level\": \"{{$json[\"risk_level\"]}}\", \"channel\": \"SOC_CRITICAL_WEBHOOK\"}"
+                                     }
+                  }
+              ]
+}
