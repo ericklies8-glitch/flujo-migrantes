@@ -443,108 +443,34 @@ async def obtener_telemetria_corredor() -> TelemetriaCorredorResponse:
 
 
 # ==============================================================================
-# Endpoint de Simulación de Dinámica de Sistemas (Corredor Migratorio)
+# Proyección temporal: motor compartido con las corridas experimentales
 # ==============================================================================
+from backend.scenario_model import simular_determinista
 
 @app.post(
     "/corridor/simulate",
     response_model=SimulacionResponse,
     tags=["Gemelo Digital", "Simulación"],
-    summary="Proyección temporal de stocks y flujos ('Retenidos' vs 'Integrados')"
+    summary="Proyección temporal de stocks y flujos agregados",
 )
 async def simular_dinamica_corredor(solicitud: SimulacionRequest) -> SimulacionResponse:
-    """
-    Ejecuta el motor de dinámica de sistemas para proyectar la evolución mensual
-    del stock de migrantes 'Retenidos' y el flujo acumulado de 'Integrados' bajo
-    distintos escenarios sociopolíticos:
-    - 'Línea Base'
-    - 'Crisis +50%'
-    - 'Cierre de Fronteras'
-    - 'Respuesta Humanitaria'
-    """
-    escenario = solicitud.escenario
-    meses = solicitud.meses
-
-    # Parámetros de gobernanza según escenario
-    config_escenarios = {
-        "Línea Base": {
-            "flujo_base": 10000,
-            "tasa_integracion": 0.65,
-            "tasa_retencion": 0.35,
-            "factor_crecimiento": 0.015,
-            "despeje_retenidos": 0.15
-        },
-        "Crisis +50%": {
-            "flujo_base": 15000,
-            "tasa_integracion": 0.45,
-            "tasa_retencion": 0.55,
-            "factor_crecimiento": 0.035,
-            "despeje_retenidos": 0.08
-        },
-        "Cierre de Fronteras": {
-            "flujo_base": 5500,
-            "tasa_integracion": 0.22,
-            "tasa_retencion": 0.78,
-            "factor_crecimiento": -0.010,
-            "despeje_retenidos": 0.04
-        },
-        "Respuesta Humanitaria": {
-            "flujo_base": 11500,
-            "tasa_integracion": 0.85,
-            "tasa_retencion": 0.15,
-            "factor_crecimiento": 0.005,
-            "despeje_retenidos": 0.30
-        }
-    }
-
-    params = config_escenarios.get(escenario, config_escenarios["Línea Base"])
-
-    serie_temporal: List[PuntoSimulacion] = []
-    stock_retenidos = 1200  # Stock inicial existente en el corredor
-    acumulado_integrados = 0
-    acumulado_entrantes = 0
-    capacidad_red_corredor = 18500  # Capacidad máxima agregada
-
-    for m in range(1, meses + 1):
-        # Flujo entrante con factor estacional y tendencia
-        variacion_estacional = np.sin((m / 12.0) * 2.0 * np.pi) * 0.08
-        factor_tendencia = (1.0 + params["factor_crecimiento"]) ** (m - 1)
-        flujo_mes = int(params["flujo_base"] * factor_tendencia * (1.0 + variacion_estacional))
-        flujo_mes = max(flujo_mes, 500)
-
-        # Flujo de nuevos retenidos e integrados del mes
-        nuevos_integrados = int(flujo_mes * params["tasa_integracion"])
-        nuevos_retenidos = int(flujo_mes * params["tasa_retencion"])
-
-        # Despeje o tránsito paulatino de retenidos acumulados anteriores
-        despeje = int(stock_retenidos * params["despeje_retenidos"])
-        stock_retenidos = max(0, stock_retenidos + nuevos_retenidos - despeje)
-        acumulado_integrados += (nuevos_integrados + despeje)
-        acumulado_entrantes += flujo_mes
-
-        # Tasa de saturación del corredor frente al stock retenido activo
-        saturacion_pct = min(100.0, round((stock_retenidos / capacidad_red_corredor) * 100.0, 2))
-
-        serie_temporal.append(
-            PuntoSimulacion(
-                mes=m,
-                etiqueta_mes=f"Mes {m:02d}",
-                flujo_entrante=flujo_mes,
-                retenidos_mes=nuevos_retenidos,
-                integrados_mes=nuevos_integrados + despeje,
-                retenidos_acumulados=stock_retenidos,
-                integrados_acumulados=acumulado_integrados,
-                saturacion_corredor_pct=saturacion_pct
-            )
-        )
-
+    resultado = simular_determinista(solicitud.escenario, solicitud.meses)
     return SimulacionResponse(
-        escenario=escenario,
-        meses_evaluados=meses,
-        tasa_integracion_estimada_pct=round(params["tasa_integracion"] * 100.0, 1),
-        tasa_retencion_estimada_pct=round(params["tasa_retencion"] * 100.0, 1),
-        total_acumulado_entrantes=acumulado_entrantes,
-        total_acumulado_retenidos=stock_retenidos,
-        total_acumulado_integrados=acumulado_integrados,
-        serie_temporal=serie_temporal
+        escenario=resultado["escenario"],
+        meses_evaluados=resultado["meses_evaluados"],
+        tasa_integracion_estimada_pct=round(resultado["tasa_integracion_parametrizada_pct"], 1),
+        tasa_retencion_estimada_pct=round(resultado["tasa_retencion_parametrizada_pct"], 1),
+        total_acumulado_entrantes=resultado["total_acumulado_entrantes"],
+        total_acumulado_retenidos=resultado["total_acumulado_retenidos"],
+        total_acumulado_integrados=resultado["total_acumulado_integrados"],
+        serie_temporal=[
+            PuntoSimulacion(
+                mes=punto["mes"], etiqueta_mes=punto["etiqueta_mes"],
+                flujo_entrante=punto["flujo_entrante"], retenidos_mes=punto["retenidos_mes"],
+                integrados_mes=punto["integrados_mes"],
+                retenidos_acumulados=punto["retenidos_acumulados"],
+                integrados_acumulados=punto["integrados_acumulados"],
+                saturacion_corredor_pct=punto["saturacion_corredor_pct"],
+            ) for punto in resultado["serie_temporal"]
+        ],
     )
