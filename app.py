@@ -28,6 +28,7 @@ import pydeck as pdk
 import requests
 # pyrefly: ignore [missing-import]
 import streamlit as st
+from backend.scenario_model import CAPACIDAD_RED_CORREDOR, simular_determinista
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import landscape, letter
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -585,7 +586,7 @@ if seleccion == "Panel Principal":
 # ==============================================================================
 elif seleccion == "Gemelo Digital 3D":
     st.title("🌐 Gemelo Digital 3D: Corredor Migratorio de Perú")
-    st.markdown("**Representación geoespacial tridimensional alimentada en tiempo real vía `GET /corridor/telemetry`.**")
+    st.markdown("**Panel geoespacial de los cinco nodos configurados vía `GET /corridor/telemetry`. Las cargas son valores de referencia; no hay sensores en tiempo real.**")
 
     telemetria_data = api_get("/corridor/telemetry")
 
@@ -738,7 +739,7 @@ elif seleccion == "Simulación de Escenarios":
             "Selecciona el Escenario:",
             options=escenarios_disponibles,
             index=1,
-            help="Escenarios calibrados con las políticas de control y absorción migratoria."
+            help="Configuraciones experimentales de parámetros, sin calibración con registros observados."
         )
 
         meses_slider = st.slider(
@@ -756,16 +757,16 @@ elif seleccion == "Simulación de Escenarios":
         st.markdown("---")
         st.markdown("#### ℹ️ Definición Teórica del Escenario:")
         if escenario_sel == "Línea Base":
-            st.info("📌 **Línea Base:** Inflow constante (~10k migrantes/mes) con absorción legal e integración laboral regular del 65%.")
+            st.info("📌 **Línea Base:** flujo base de 10 000 unidades/mes, tránsito directo α=0.65 y despeje δ=0.15.")
         elif escenario_sel == "Crisis +50%":
-            st.warning("⚡ **Crisis +50%:** Choque exógeno que eleva el flujo a 15k migrantes/mes, saturando albergues y reduciendo la tasa de integración a 45%.")
+            st.warning("⚡ **Crisis +50%:** flujo base de 15 000 unidades/mes, tránsito directo α=0.45 y despeje δ=0.08.")
         elif escenario_sel == "Cierre de Fronteras":
-            st.error("🚫 **Cierre de Fronteras:** Bloqueo militarizado de pasos autorizados. Retención masiva en frontera (78%) y auge de rutas clandestinas.")
+            st.error("🚫 **Restricción de entrada:** flujo base de 5 500 unidades/mes, tránsito directo α=0.22 y despeje δ=0.04; no se modelan rutas.")
         elif escenario_sel == "Respuesta Humanitaria":
-            st.success("🕊️ **Respuesta Humanitaria:** Corredores protegidos ACNUR/OIM y regularización acelerada. Tasa de integración del 85%.")
+            st.success("🕊️ **Mayor tránsito y despeje:** flujo base de 11 500 unidades/mes, tránsito directo α=0.85 y despeje δ=0.30.")
 
     with col_s2:
-        st.markdown("### 📈 Curvas Proyectadas: 'Retenidos' vs 'Integrados'")
+        st.markdown("### 📈 Curvas calculadas: stock retenido y salidas acumuladas")
 
         # Ejecución vía API POST /corridor/simulate
         sim_payload = {"escenario": escenario_sel, "meses": meses_slider}
@@ -788,21 +789,12 @@ elif seleccion == "Simulación de Escenarios":
                 "status": "Calculado exitosamente vía FastAPI"
             }
         else:
-            # Fallback en caso de que el backend no responda
-            t = np.arange(1, meses_slider + 1)
-            flujo_base = 15000 if escenario_sel == "Crisis +50%" else (10000 if escenario_sel == "Línea Base" else (5500 if escenario_sel == "Cierre de Fronteras" else 11500))
-            tasa_ret = 55.0 if escenario_sel == "Crisis +50%" else (35.0 if escenario_sel == "Línea Base" else (78.0 if escenario_sel == "Cierre de Fronteras" else 15.0))
-            tasa_int = 100.0 - tasa_ret
-            retenidos_curve = [int(1200 + (flujo_base * (tasa_ret / 100) * i * 0.7)) for i in t]
-            integrados_curve = [int(flujo_base * (tasa_int / 100) * i) for i in t]
-            df_sim = pd.DataFrame({
-                "mes": t,
-                "etiqueta_mes": [f"Mes {i:02d}" for i in t],
-                "flujo_entrante": [flujo_base] * len(t),
-                "retenidos_acumulados": retenidos_curve,
-                "integrados_acumulados": integrados_curve,
-                "saturacion_corredor_pct": [min(100.0, round((r / 18500) * 100, 2)) for r in retenidos_curve]
-            })
+            # Cálculo local a partir de las mismas ecuaciones del backend, sin API.
+            st.warning("API fuera de línea: mostrando el cálculo determinista local; no es telemetría observada.")
+            proyeccion_local = simular_determinista(escenario_sel, meses_slider)
+            df_sim = pd.DataFrame(proyeccion_local["serie_temporal"])
+            tasa_int = proyeccion_local["tasa_integracion_parametrizada_pct"]
+            tasa_ret = proyeccion_local["tasa_retencion_parametrizada_pct"]
             st.session_state.last_sim = {
                 "escenario": str(escenario_sel),
                 "meses": int(meses_slider),
@@ -810,7 +802,7 @@ elif seleccion == "Simulación de Escenarios":
                 "integrados_final": int(df_sim["integrados_acumulados"].iloc[-1]),
                 "saturacion_final": float(df_sim["saturacion_corredor_pct"].iloc[-1]),
                 "serie_temporal": df_sim.to_dict(orient="records"),
-                "status": "Calculado mediante proyección local (Fallback)"
+                "status": "Cálculo determinista local (API no disponible)",
             }
 
         # Gráfico Plotly
@@ -831,18 +823,25 @@ elif seleccion == "Simulación de Escenarios":
             x=df_sim["etiqueta_mes"],
             y=df_sim["integrados_acumulados"],
             mode="lines+markers",
-            name="Población Integrada / Tránsito Efectivo",
+            name="Salidas acumuladas (tránsito directo + despeje)",
             line=dict(color="#22c55e", width=3),
             marker=dict(size=7)
         ))
 
-        # Línea de umbral de colapso de la red humanitaria (250 personas en albergues críticos o umbral de advertencia)
+        # Umbrales analíticos de la red, sin inferir colapso observado de albergues.
         fig_curvas.add_hline(
-            y=250,
+            y=0.90 * CAPACIDAD_RED_CORREDOR,
             line_dash="dot",
             line_color="#fbbf24",
-            annotation_text="⚠️ Umbral de Colapso Crítico (250 personas en triaje)",
-            annotation_position="bottom right"
+            annotation_text="Alerta nominal 90% (17 100)",
+            annotation_position="bottom right",
+        )
+        fig_curvas.add_hline(
+            y=CAPACIDAD_RED_CORREDOR,
+            line_dash="dash",
+            line_color="#e2e8f0",
+            annotation_text="Capacidad nominal 100% (19 000)",
+            annotation_position="top right",
         )
 
         fig_curvas.update_layout(
@@ -856,20 +855,14 @@ elif seleccion == "Simulación de Escenarios":
         )
         st.plotly_chart(fig_curvas, use_container_width=True)
 
-    # CONTENEDOR EXPLICATIVO (RÚBRICA DE PIZARRA): BRECHA VS UMBRAL DE COLAPSO
-    st.markdown("""
-    <div class="rubric-box">
-        <h4 style="color: #38bdf8; margin-top: 0;">⚖️ Análisis de Brecha respecto al Umbral de Colapso Humanitario (250 personas)</h4>
-        <div style="font-size: 0.88rem; line-height: 1.6; color: #e2e8f0;">
-            <p><b>Interpretación de la Brecha Retenidos vs. Integrados:</b> En modelos de dinámica de sistemas, la distancia vertical entre la curva roja (Retenidos) y la curva verde (Integrados) representa la <i>ineficiencia del drenaje del sistema</i>.
-            El <b>umbral crítico de 250 personas</b> define la capacidad máxima de albergue simultáneo en los módulos CEBAF de Tumbes y puntos de socorro en Piura.</p>
-            <p>Bajo el escenario <b>{escenario}</b>, la población retenida acumulada alcanza los <b>{retenidos:,} migrantes</b>, superando con creces la cota de resistencia logística. Esto significa que a partir del segundo mes la red entra en colapso operativo, obligando a las familias migrantes a pernoctar a la intemperie a menos que se implemente una <i>Respuesta Humanitaria</i> que acelere la tasa de integración por encima del 75%.</p>
-        </div>
-    </div>
-    """.format(
-        escenario=escenario_sel,
-        retenidos=int(df_sim["retenidos_acumulados"].iloc[-1])
-    ), unsafe_allow_html=True)
+    st.info(
+        f"**Lectura de capacidad nominal:** el stock retenido al final del horizonte "
+        f"es {int(df_sim['retenidos_acumulados'].iloc[-1]):,} unidades. "
+        f"La red utiliza una referencia configurada de {CAPACIDAD_RED_CORREDOR:,} unidades "
+        f"(alerta al 90% y sobrecapacidad por encima del 100%). "
+        "Estos indicadores se calculan con parámetros experimentales y no describen "
+        "ocupación observada, acceso efectivo a servicios ni colapso real de infraestructura."
+    )
 
 
 # ==============================================================================
@@ -1302,13 +1295,14 @@ with st.expander("🤖 Asistente MDT en línea", expanded=False):
             st.rerun()
 
     with col_sug3:
-        if st.button("⚡ ¿Qué ocurre con la brecha de colapso de 250 personas?", key="btn_q3", use_container_width=True):
-            user_msg = "¿Cuál es el impacto del umbral de colapso de 250 personas?"
+        if st.button("⚡ ¿Qué significa superar la capacidad nominal?", key="btn_q3", use_container_width=True):
+            user_msg = "¿Qué significa que el stock supere la capacidad nominal configurada?"
             st.session_state.chat_messages.append({"role": "user", "content": user_msg})
             resp_ai = (
-                "⚖️ **Umbral Crítico de Colapso (250 pers.):** En dinámicas de crisis, cuando el stock de retenidos en un "
-                "nodo supera las 250 personas por más de 72 horas, la infraestructura de albergue y saneamiento colapsa, "
-                "provocando hacinamiento y desbordamiento hacia la vía pública."
+                "📊 **Capacidad nominal:** la red tiene un valor de referencia de 19 000 unidades. "
+                "Una saturación calculada superior al 100% significa que el stock agregado del "
+                "modelo supera esa referencia, sin demostrar por sí solo ocupación real, "
+                "colapso de instalaciones ni cambios en rutas individuales."
             )
             st.session_state.chat_messages.append({"role": "assistant", "content": resp_ai})
             st.rerun()
